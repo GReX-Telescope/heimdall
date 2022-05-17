@@ -9,7 +9,6 @@ AM_CXXFLAGS = \
 	-I$(top_srcdir)/Formats \
 	-I$(top_srcdir)/Network \
 	-I$(top_srcdir)/Pipeline \
-	@PSRDADA_CFLAGS@ \
 	@DEDISP_CFLAGS@
 
 heimdall_SOURCES = heimdall.C
@@ -20,7 +19,7 @@ LDADD = \
   $(top_builddir)/Formats/libhdformats.la \
   $(top_builddir)/Pipeline/libhdpipeline.la \
   $(top_builddir)/Network/libhdnetwork.la \
-  @CUDA_LIBS@ @DEDISP_LIBS@ @PSRDADA_LIBS@
+  @CUDA_LIBS@ @DEDISP_LIBS@
 
 heimdall_CFLAGS = $(CUDA_CFLAGS)
 generate_dmlist_CXXFLAGS = @DEDISP_CFLAGS@
