@@ -5,7 +5,7 @@
  *
  ***************************************************************************/
 
-#include "hd/label_candidate_clusters.h"
+#include "hd/label_candidate_clusters.hpp"
 #include "hd/are_coincident.cuh"
 
 #include <thrust/host_vector.h>

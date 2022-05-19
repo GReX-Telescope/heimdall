@@ -5,7 +5,7 @@
  *
  ***************************************************************************/
 
-#include "hd/median_filter.h"
+#include "hd/median_filter.hpp"
 
 #include <thrust/device_ptr.h>
 #include <thrust/transform.h>

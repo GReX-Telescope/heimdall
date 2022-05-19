@@ -5,7 +5,7 @@
  *
  ***************************************************************************/
 
-#include "hd/merge_candidates.h"
+#include "hd/merge_candidates.hpp"
 
 #include <thrust/device_vector.h>
 #include <thrust/sort.h>

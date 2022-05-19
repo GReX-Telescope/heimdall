@@ -5,11 +5,11 @@
  *
  ***************************************************************************/
 
-#include "hd/clean_filterbank_rfi.h"
-#include "hd/remove_baseline.h"
-#include "hd/get_rms.h"
-#include "hd/measure_bandpass.h"
-#include "hd/matched_filter.h"
+#include "hd/clean_filterbank_rfi.hpp"
+#include "hd/remove_baseline.hpp"
+#include "hd/get_rms.hpp"
+#include "hd/measure_bandpass.hpp"
+#include "hd/matched_filter.hpp"
 
 #include <vector>
 #include <dedisp.h>

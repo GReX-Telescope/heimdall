@@ -5,8 +5,8 @@
  *
  ***************************************************************************/
 
-#include "hd/remove_baseline.h"
-#include "hd/median_filter.h"
+#include "hd/remove_baseline.hpp"
+#include "hd/median_filter.hpp"
 //#include "hd/write_time_series.h"
 
 #include <thrust/device_vector.h>
