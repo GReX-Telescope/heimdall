@@ -1,0 +1,21 @@
+{
+    "files.associations": {
+        "candidate_profiler.C": "cpp",
+        "Candidates.C": "cpp",
+        "coincidencer_client.C": "cpp",
+        "coincidencer.C": "cpp",
+        "fil2pgm.C": "cpp",
+        "generate_dmlist.C": "cpp",
+        "heimdall.C": "cpp",
+        "SigprocFile.C": "cpp",
+        "PSRDadaRingBuffer.C": "cpp",
+        "giant_maker.C": "cpp",
+        "ClientSocket.C": "cpp",
+        "ServerSocket.C": "cpp",
+        "Socket.C": "cpp",
+        "default_params.C": "cpp",
+        "error.C": "cpp",
+        "outtakes.C": "cpp",
+        "parse_command_line.C": "cpp"
+    }
+}

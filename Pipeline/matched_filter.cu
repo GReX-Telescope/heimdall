@@ -5,8 +5,8 @@
  *
  ***************************************************************************/
 
-#include "hd/matched_filter.h"
-#include "hd/strided_range.h"
+#include "hd/matched_filter.hpp"
+#include "hd/strided_range.hpp"
 
 #include <thrust/device_vector.h>
 #include <thrust/transform_scan.h>

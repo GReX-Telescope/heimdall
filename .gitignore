@@ -65,3 +65,5 @@ Scripts/trans_paths.py
 Scripts/trans_paths.pyc
 
 update.log
+
+build/

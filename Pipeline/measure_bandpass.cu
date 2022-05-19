@@ -5,9 +5,9 @@
  *
  ***************************************************************************/
 
-#include "hd/measure_bandpass.h"
-#include "hd/median_filter.h"
-#include "hd/get_rms.h"
+#include "hd/measure_bandpass.hpp"
+#include "hd/median_filter.hpp"
+#include "hd/get_rms.hpp"
 
 // TESTING ONLY
 // #include "hd/write_time_series.h"

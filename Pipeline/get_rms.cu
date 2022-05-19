@@ -5,8 +5,8 @@
  *
  ***************************************************************************/
 
-#include "hd/get_rms.h"
-#include "hd/median_filter.h"
+#include "hd/get_rms.hpp"
+#include "hd/median_filter.hpp"
 
 #include <thrust/device_vector.h>
 #include <thrust/transform.h>

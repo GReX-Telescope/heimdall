@@ -26,21 +26,21 @@ using thrust::device_vector;
 #include <thrust/iterator/constant_iterator.h>
 #include <thrust/gather.h>
 
-#include "hd/pipeline.h"
-#include "hd/maths.h"
-#include "hd/clean_filterbank_rfi.h"
+#include "hd/pipeline.hpp"
+#include "hd/maths.hpp"
+#include "hd/clean_filterbank_rfi.hpp"
 
-#include "hd/remove_baseline.h"
-#include "hd/matched_filter.h"
-#include "hd/get_rms.h"
-#include "hd/find_giants.h"
-#include "hd/label_candidate_clusters.h"
-#include "hd/merge_candidates.h"
+#include "hd/remove_baseline.hpp"
+#include "hd/matched_filter.hpp"
+#include "hd/get_rms.hpp"
+#include "hd/find_giants.hpp"
+#include "hd/label_candidate_clusters.hpp"
+#include "hd/merge_candidates.hpp"
 
-#include "hd/DataSource.h"
-#include "hd/ClientSocket.h"
-#include "hd/SocketException.h"
-#include "hd/stopwatch.h"         // For benchmarking
+#include "hd/DataSource.hpp"
+#include "hd/ClientSocket.hpp"
+#include "hd/SocketException.hpp"
+#include "hd/stopwatch.hpp"         // For benchmarking
 //#include "hd/write_time_series.h" // For debugging
 
 #include <dedisp.h>
@@ -122,7 +122,7 @@ unsigned int get_filter_index(unsigned int filter_width) {
   unsigned int v = filter_width;
   static const unsigned int b[] = {0xAAAAAAAA, 0xCCCCCCCC, 0xF0F0F0F0, 
                                    0xFF00FF00, 0xFFFF0000};
-  register unsigned int r = (v & b[0]) != 0;
+  unsigned int r = (v & b[0]) != 0;
   for( int i=4; i>0; --i) {
     r |= ((v & b[i]) != 0) << i;
   }
