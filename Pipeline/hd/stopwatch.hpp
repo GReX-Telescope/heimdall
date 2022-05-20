@@ -3,9 +3,12 @@
 
 #include <chrono>
 
+typedef std::chrono::high_resolution_clock hrclock;
+typedef std::chrono::duration<float, std::milli> duration;
+
 class Stopwatch {
   //! Start of measurement
-  std::chrono::_V2::steady_clock::time_point start_time;
+  hrclock::time_point start_time;
 
   //! Time difference between the last start and stop
   float diff_time;
@@ -60,7 +63,7 @@ private:
 //! Start time measurement
 ////////////////////////////////////////////////////////////////////////////////
 inline void Stopwatch::start() {
-  start_time = std::chrono::steady_clock::now();
+  start_time = hrclock::now();
   running = true;
 }
 
@@ -84,7 +87,7 @@ inline void Stopwatch::reset() {
   total_time = 0;
   clock_sessions = 0;
   if (running)
-    std::chrono::steady_clock::now();
+    hrclock::now();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -116,11 +119,9 @@ inline float Stopwatch::getAverageTime() const {
 
 ////////////////////////////////////////////////////////////////////////////////
 inline float Stopwatch::getDiffTime() const {
-  auto now = std::chrono::steady_clock::now();
-
+  duration elapsed = hrclock::now() - start_time;
   // time difference in milli-seconds
-  return (float)(1000.0 * (now.tv_sec - start_time.tv_sec) +
-                 (0.001 * (now.tv_usec - start_time.tv_usec)));
+  return elapsed.count();
 }
 
 #endif // STOPWATCH_H

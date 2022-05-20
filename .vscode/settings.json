@@ -16,6 +16,8 @@
         "default_params.C": "cpp",
         "error.C": "cpp",
         "outtakes.C": "cpp",
-        "parse_command_line.C": "cpp"
+        "parse_command_line.C": "cpp",
+        "mman.h": "c",
+        "chrono": "cpp"
     }
 }
