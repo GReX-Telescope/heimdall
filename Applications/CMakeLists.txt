@@ -11,6 +11,9 @@ add_executable(generate_dmlist generate_dmlist.cpp)
 target_include_directories(heimdall PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../Pipeline")
 target_include_directories(heimdall PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../Formats")
 target_link_libraries(heimdall hdpipeline hdnetwork hdformats)
+if (PSRDADA_FOUND)
+    target_link_libraries(heimdall psrdada)
+endif()
 install(TARGETS heimdall DESTINATION bin)
 
 # candidate_profiler
