@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-  set(CMAKE_CUDA_ARCHITECTURES 75)
+  set(CMAKE_CUDA_ARCHITECTURES "35;50;75")
 endif()
 
 if(NOT DEFINED CMAKE_CUDA_STANDARD)
@@ -29,6 +29,13 @@ find_package(Boost REQUIRED)
 # Dedisp
 find_package(Dedisp REQUIRED)
 # PSRDada
+find_package(PSRDada)
+
+if (PSRDADA_FOUND)
+  set(HAVE_PSRDADA on)
+  add_compile_definitions(HAVE_PSRDADA)
+endif()
+
 
 # Add headers
 include_directories(${Boost_INCLUDE_DIRS})

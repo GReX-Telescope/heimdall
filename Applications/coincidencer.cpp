@@ -22,8 +22,8 @@ using namespace std;
 #include <unistd.h>
 
 #include "hd/Candidates.hpp"
-#include "hd/ServerSocket.h"
-#include "hd/SocketException.h"
+#include "hd/ServerSocket.hpp"
+#include "hd/SocketException.hpp"
 
 int quit_threads = 0;
 

@@ -8,8 +8,8 @@
 #include <iostream>
 #include <string>
 
-#include "hd/ClientSocket.h"
-#include "hd/SocketException.h"
+#include "hd/ClientSocket.hpp"
+#include "hd/SocketException.hpp"
 
 using namespace std;
 

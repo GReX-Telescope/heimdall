@@ -46,7 +46,7 @@ void hd_set_default_params(hd_params *params) {
   //         to capture (*rare*) coincident events.
   params->cand_sep_filter = 3; // Note: filter numbers, not actual width
   params->cand_sep_dm = 200;   // Note: trials, not actual DM
-  params->cand_rfi_dm_cut = 1.5;
+  params->cand_rfi_dm_cut = 1; // This was 1.5, but was implicitly cast to 1
   // params->cand_min_members = 3;
 
   // TODO: This still needs tuning!

@@ -9,7 +9,7 @@ using std::string;
 #include <vector>
 
 // SIGPROC header
-#include "hd/header.h"
+#include "hd/header.hpp"
 
 template <int NBITS, typename T = unsigned int> struct max_value {
   static const T value = (((unsigned)1 << (NBITS - 1)) - 1) * 2 + 1;

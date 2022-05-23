@@ -22,10 +22,10 @@ using std::vector;
 #include <iterator>
 #include <numeric>
 
-#include "hd/default_params.h"
-#include "hd/error.h"
-#include "hd/header.h"
-#include "hd/params.h"
+#include "hd/default_params.hpp"
+#include "hd/error.hpp"
+#include "hd/header.hpp"
+#include "hd/params.hpp"
 
 #include <dedisp.h>
 
