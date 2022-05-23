@@ -17,6 +17,9 @@ if(NOT DEFINED CMAKE_CUDA_STANDARD)
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 endif()
 
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 # Define dependencies
 include(GNUInstallDirs)
 # CUDAToolkit
@@ -35,6 +38,8 @@ find_package(PSRDada)
 if (PSRDada_FOUND)
   set(HAVE_PSRDADA on)
   add_compile_definitions(HAVE_PSRDADA)
+  find_package(rdmacm REQUIRED)
+  set(HAVE_RDMACM on)
   message(STATUS "Found PSRDada")
 endif()
 
