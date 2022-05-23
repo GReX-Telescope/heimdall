@@ -20,4 +20,4 @@ target_include_directories(hdpipeline PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(hdpipeline PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../Network")
 target_include_directories(hdpipeline PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../Formats")
 
-target_compile_options(hdpipeline PRIVATE -Wall)
+set_target_properties(hdpipeline PROPERTIES CUDA_SEPARABLE_COMPILATION ON)

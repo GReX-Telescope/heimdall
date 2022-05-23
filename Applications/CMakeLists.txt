@@ -10,8 +10,6 @@ add_executable(generate_dmlist generate_dmlist.cpp)
 # Heimdall main executable
 target_include_directories(heimdall PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../Pipeline")
 target_include_directories(heimdall PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../Formats")
-target_link_libraries(heimdall STATIC hdformats)
-target_link_libraries(heimdall STATIC hdnetwork)
-target_link_libraries(heimdall STATIC hdpipeline)
+target_link_libraries(heimdall hdpipeline hdnetwork hdformats ${Thrust_LIBRARIES} ${Boost_LIBRARIES} ${Dedisp_LIBRARIES})
 
 target_include_directories(candidate_profiler PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../Formats")
