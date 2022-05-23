@@ -66,4 +66,9 @@ Scripts/trans_paths.pyc
 
 update.log
 
+# Artifacts
 build/
+
+# LSP
+.cache/
+.ccls-cache/

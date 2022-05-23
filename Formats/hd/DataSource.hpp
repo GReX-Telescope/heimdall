@@ -8,6 +8,8 @@
 #ifndef DATA_SOURCE_HPP
 #define DATA_SOURCE_HPP
 
+#include <time.h>
+
 #define HD_TIMESTR "%Y-%m-%d-%H:%M:%S"
 
 class DataSource {

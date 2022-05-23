@@ -1,21 +1,14 @@
-/***************************************************************************
- *
- *   Copyright (C) 2012 by Ben Barsdell and Andrew Jameson
- *   Licensed under the Academic Free License version 2.1
- *
- ***************************************************************************/
-
 #ifndef STOPWATCH_HPP
 #define STOPWATCH_HPP
 
-// includes, system
-#include <ctime>
-#include <sys/time.h>
+#include <chrono>
 
-// Note: This is currently Linux-specific!
+typedef std::chrono::high_resolution_clock hrclock;
+typedef std::chrono::duration<float, std::milli> duration;
+
 class Stopwatch {
   //! Start of measurement
-  struct timeval start_time;
+  hrclock::time_point start_time;
 
   //! Time difference between the last start and stop
   float diff_time;
@@ -70,8 +63,7 @@ private:
 //! Start time measurement
 ////////////////////////////////////////////////////////////////////////////////
 inline void Stopwatch::start() {
-
-  gettimeofday(&start_time, 0);
+  start_time = hrclock::now();
   running = true;
 }
 
@@ -80,7 +72,6 @@ inline void Stopwatch::start() {
 //! variable. Also increment the number of times this clock has been run.
 ////////////////////////////////////////////////////////////////////////////////
 inline void Stopwatch::stop() {
-
   diff_time = getDiffTime();
   total_time += diff_time;
   running = false;
@@ -96,7 +87,7 @@ inline void Stopwatch::reset() {
   total_time = 0;
   clock_sessions = 0;
   if (running)
-    gettimeofday(&start_time, 0);
+    hrclock::now();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -128,12 +119,9 @@ inline float Stopwatch::getAverageTime() const {
 
 ////////////////////////////////////////////////////////////////////////////////
 inline float Stopwatch::getDiffTime() const {
-  struct timeval t_time;
-  gettimeofday(&t_time, 0);
-
+  duration elapsed = hrclock::now() - start_time;
   // time difference in milli-seconds
-  return (float)(1000.0 * (t_time.tv_sec - start_time.tv_sec) +
-                 (0.001 * (t_time.tv_usec - start_time.tv_usec)));
+  return elapsed.count();
 }
 
-#endif // _STOPWATCH_H
+#endif // STOPWATCH_H
