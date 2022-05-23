@@ -28,14 +28,15 @@ thrust_create_target(Thrust)
 find_package(Boost REQUIRED)
 # Dedisp
 find_package(Dedisp REQUIRED)
+message(STATUS "Found Dedisp")
 # PSRDada
 find_package(PSRDada)
 
-if (PSRDADA_FOUND)
+if (PSRDada_FOUND)
   set(HAVE_PSRDADA on)
   add_compile_definitions(HAVE_PSRDADA)
+  message(STATUS "Found PSRDada")
 endif()
-
 
 # Add headers
 include_directories(${Boost_INCLUDE_DIRS})
