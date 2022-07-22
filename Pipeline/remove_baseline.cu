@@ -33,7 +33,7 @@ public:
 		// Find the desired time resolution
 		hd_size  sample_count =
 			(hd_size)(oversample * hd_float(count)/(2*smooth_radius) + 0.5);
-		if( sample_count == 0 ) {
+		if( sample_count <= 1 ) {
 			// Too few samples, no need to baseline
 			return HD_NO_ERROR;
 		}
