@@ -56,7 +56,7 @@ Makefile
 
 # Applications
 Applications/heimdall
-aApplications/coincidencer
+Applications/coincidencer
 Applications/coincidencer_client
 Applications/candidate_profiler
 Applications/generate_dmlist
