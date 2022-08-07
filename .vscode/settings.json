@@ -1,0 +1,18 @@
+{
+    "files.associations": {
+        "PSRDadaRingBuffer.C": "cpp",
+        "giant_maker.C": "cpp",
+        "ClientSocket.C": "cpp",
+        "ServerSocket.C": "cpp",
+        "SigprocFile.C": "cpp",
+        "heimdall.C": "cpp",
+        "generate_dmlist.C": "cpp",
+        "fil2pgm.C": "cpp",
+        "coincidencer_client.C": "cpp",
+        "candidate_profiler.C": "cpp",
+        "parse_command_line.C": "cpp",
+        "outtakes.C": "cpp",
+        "error.C": "cpp",
+        "default_params.C": "cpp"
+    }
+}
