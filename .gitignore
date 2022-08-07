@@ -1,28 +1,75 @@
-**/*.o
-**/*.lo
-**/*.a
-**/.**/*.o
+
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+*.deps
+
+# libraries
+*.lib
+*.a
+*.la
+*.lo
+
+# Shared objects 
+*.so
+*.so.*
+
+# autoconf
+/autom4te.cache
+/autoscan.log
+/autoscan-*.log
+/aclocal.m4
+/compile
+/config.guess
+/config.h.in
+/config.h.in~
+/config.sub
+/config.h
+/config.log
+/config.status
+/configure
+/configure.scan
+/depcomp
+/install-sh
+/libtool
+/ltmain.sh
+/missing
+/stamp-h1
+/test-driver
+
+# M4
+config/libtool.m4
+config/ltoptions.m4
+config/ltsugar.m4
+config/ltversion.m4
+config/lt~obsolete.m4
+autom4te.cache
+
+# Makefiles
+Makefile.in
 Makefile
-**/Makefile
-autom4te.cache/output.1
-autom4te.cache/traces.0
-autom4te.cache/traces.1
-lib/libhdformats.la
-lib/libhdnetwork.la
-lib/libhdpipeline.la
-Applications/.deps/heimdall.Po
-Applications/candidate_profiler
+
+# directories
+.deps/
+.libs/
+
+# Applications
+Applications/heimdall
 Applications/coincidencer
 Applications/coincidencer_client
-Applications/fil2pgm
+Applications/candidate_profiler
 Applications/generate_dmlist
-Applications/heimdall
-Formats/libhdformats.la
-Network/libhdnetwork.la
-Formats/.libs/libhdnetwork.lai
-Network/.libs/libhdformats.lai
-Pipeline/.libs/libhdpipeline.lai
-bin/
-config.status
-libtool
+Applications/fil2pgm
+Scripts/trans_paths.py
+Scripts/trans_paths.pyc
 
+update.log
+
+# Artifacts
+build/
+
+# LSP
+.cache/
+.ccls-cache/
