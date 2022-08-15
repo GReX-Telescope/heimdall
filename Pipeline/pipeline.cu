@@ -19,6 +19,7 @@ using std::endl;
 #include <sstream>
 #include <string>
 #include <time.h>
+#include <utility> // For std::pair
 
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
@@ -73,7 +74,7 @@ void tfunc(std::vector<hd_byte> &vec) {
 #ifdef HD_BENCHMARK
 void start_timer(Stopwatch &timer) { timer.start(); }
 void stop_timer(Stopwatch &timer) {
-  cudaThreadSynchronize();
+  cudaDeviceSynchronize();
   timer.stop();
 }
 #else
@@ -81,7 +82,6 @@ void start_timer(Stopwatch &timer) {}
 void stop_timer(Stopwatch &timer) {}
 #endif // HD_BENCHMARK
 
-#include <utility> // For std::pair
 template <typename T, typename U> std::pair<T &, U &> tie(T &a, U &b) {
   return std::pair<T &, U &>(a, b);
 }
@@ -89,14 +89,54 @@ template <typename T, typename U> std::pair<T &, U &> tie(T &a, U &b) {
 struct hd_pipeline_t {
   hd_params params;
   dedisp_plan dedispersion_plan;
-  // MPI_Comm    communicator;
-
   // Memory buffers used during pipeline execution
   std::vector<hd_byte> h_clean_filterbank;
   host_vector<hd_byte> h_dm_series;
   device_vector<hd_float> d_time_series;
   device_vector<hd_float> d_filtered_series;
 };
+
+void write_candidate_line(hd_pipeline pl, hd_size nsamps, hd_size first_idx,
+                          hd_size nsamps_computed, const float *dm_list,
+                          thrust::host_vector<hd_float> giant_peaks,
+                          thrust::host_vector<hd_size> giant_inds,
+                          thrust::host_vector<hd_size> giant_filter_inds,
+                          thrust::host_vector<hd_size> giant_dm_inds,
+                          std::stringstream &ss) {
+
+  hd_size filterbank_ind;
+  hd_size overlap =
+      pl->params.boxcar_max + dedisp_get_max_delay(pl->dedispersion_plan);
+  hd_size block_size = nsamps - overlap;
+
+  if (first_idx > 0) {
+    for (hd_size i = 0; i < giant_peaks.size(); ++i) {
+      if (giant_peaks[i] > pl->params.detect_thresh) {
+        hd_size giant_index = giant_inds[i] % nsamps;
+        hd_size beam_no = giant_inds[i] / nsamps + pl->params.beam;
+        hd_size samp_idx = first_idx + giant_index;
+        hd_size block_no = (giant_index + first_idx) /
+                           (nsamps - pl->params.boxcar_max -
+                            dedisp_get_max_delay(pl->dedispersion_plan));
+        if (giant_index < overlap)
+          filterbank_ind = block_no * block_size * pl->params.nbeams +
+                           (beam_no + 1) * block_size + giant_index - overlap;
+        else
+          filterbank_ind = block_no * block_size * pl->params.nbeams +
+                           (beam_no - 1) * block_size + giant_index + nsamps -
+                           2 * overlap;
+
+        if (giant_index < nsamps_computed + pl->params.boxcar_max / 2) {
+          // Serialize to the stringstream
+          ss << giant_peaks[i] << "\t" << filterbank_ind << "\t" << samp_idx
+             << "\t" << samp_idx * pl->params.dt << "\t" << giant_filter_inds[i]
+             << "\t" << giant_dm_inds[i] << "\t" << dm_list[giant_dm_inds[i]]
+             << "\t" << beam_no << std::endl;
+        }
+      }
+    }
+  }
+}
 
 hd_error allocate_gpu(const hd_pipeline pl) {
   // This is just a simple proc-->GPU heuristic to get us started
@@ -141,9 +181,9 @@ hd_error allocate_gpu(const hd_pipeline pl) {
   return HD_NO_ERROR;
 }
 
-// Uses the compiler builtin to count leading zeros to get the log2 of the 32bit
-// power of two filter_width Twice as fast as the LUT solution
 unsigned int get_filter_index(unsigned int filter_width) {
+  // Uses the compiler builtin to count leading zeros to get the log2 of the
+  // 32bit power of two filter_width. This is twice as fast as the LUT solution.
   return sizeof(unsigned int) * 8 - __builtin_clz(filter_width) - 1;
 }
 
@@ -151,7 +191,7 @@ hd_error hd_create_pipeline(hd_pipeline *pipeline_, hd_params params) {
   *pipeline_ = 0;
 
   // Note: We use a smart pointer here to automatically clean up after errors
-  typedef std::auto_ptr<hd_pipeline_t> smart_pipeline_ptr;
+  typedef std::unique_ptr<hd_pipeline_t> smart_pipeline_ptr;
   smart_pipeline_ptr pipeline = smart_pipeline_ptr(new hd_pipeline_t());
   if (!pipeline.get()) {
     return throw_error(HD_MEM_ALLOC_FAILED);
@@ -497,7 +537,9 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
 
       // Will make it a command line option to double or linearly increase the
       // filter width? boxcar filter loop starts
-      int boxcar_inc = pl->params.boxcar_max / pl->params.n_boxcar_inc;
+
+      // This variable is unused
+      // int boxcar_inc = pl->params.boxcar_max / pl->params.n_boxcar_inc;
 
       for (hd_size filter_width = min_filter_width;
            filter_width <= pl->params.boxcar_max; filter_width *= 2) {
@@ -585,9 +627,8 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
           float searched = ((float)dm_idx * 100) / (float)dm_count;
           cout << "WARNING: exceeded processing time / giant count: 3.5s, 10k "
                   "DM ["
-               << dm_list[dm_idx] << "] \
-space searched "
-               << searched << "%" << endl;
+               << dm_list[dm_idx] << "] space searched " << searched << "%"
+               << endl;
           break;
         }
 
@@ -601,66 +642,35 @@ space searched "
   cout << "Giant count = " << giant_count << endl;
   cout << "final_space_searched " << dm_list[dm_idx_output] << endl;
 
-  FILE *giants_out;
-  char ofileg[200];
-  sprintf(ofileg, "%s/giants.cand", pl->params.output_dir);
-  giants_out = fopen(ofileg, "a");
-
-  thrust::host_vector<hd_float> h_giant_peaks;
-  thrust::host_vector<hd_size> h_giant_inds;
-  thrust::host_vector<hd_size> h_giant_begins;
-  thrust::host_vector<hd_size> h_giant_ends;
-  thrust::host_vector<hd_size> h_giant_filter_inds;
-  thrust::host_vector<hd_size> h_giant_dm_inds;
-  thrust::host_vector<hd_size> h_giant_members;
-  thrust::host_vector<hd_float> h_giant_dms;
-
-  h_giant_peaks = d_giant_peaks;
-  h_giant_inds = d_giant_inds;
-  h_giant_begins = d_giant_begins;
-  h_giant_ends = d_giant_ends;
-  h_giant_filter_inds = d_giant_filter_inds;
-  h_giant_dm_inds = d_giant_dm_inds;
-  h_giant_members = d_giant_members;
-
-  // FILE WRITING  - prior to clustering
-  hd_size samp_idx;
-  hd_size beam_no;
-  hd_size giant_index;
-  hd_size filterbank_ind;
-  hd_size block_no;
-  hd_size overlap =
-      pl->params.boxcar_max + dedisp_get_max_delay(pl->dedispersion_plan);
-  hd_size block_size = nsamps - overlap;
-
-  if (first_idx > 0) {
-    for (hd_size i = 0; i < h_giant_peaks.size(); ++i) {
-      if (h_giant_peaks[i] > pl->params.detect_thresh) {
-        giant_index = h_giant_inds[i] % nsamps;
-        beam_no = h_giant_inds[i] / nsamps + pl->params.beam;
-        samp_idx = first_idx + giant_index;
-        block_no = (giant_index + first_idx) /
-                   (nsamps - pl->params.boxcar_max -
-                    dedisp_get_max_delay(pl->dedispersion_plan));
-        if (giant_index < overlap)
-          filterbank_ind = block_no * block_size * pl->params.nbeams +
-                           (beam_no + 1) * block_size + giant_index - overlap;
-        else
-          filterbank_ind = block_no * block_size * pl->params.nbeams +
-                           (beam_no - 1) * block_size + giant_index + nsamps -
-                           2 * overlap;
-
-        if (giant_index < nsamps_computed + pl->params.boxcar_max / 2) {
-          fprintf(giants_out, "%g %lu %lu %g %d %d %g %d\n", h_giant_peaks[i],
-                  filterbank_ind, samp_idx, samp_idx * pl->params.dt,
-                  h_giant_filter_inds[i], h_giant_dm_inds[i],
-                  dm_list[h_giant_dm_inds[i]], beam_no);
-        }
-      }
+  std::stringstream ss("");
+  // Fill in the data
+  write_candidate_line(pl, nsamps, first_idx, nsamps_computed, dm_list,
+                       d_giant_peaks, d_giant_inds, d_giant_filter_inds,
+                       d_giant_dm_inds, ss);
+  // If we have a coincidencer, write output to that, instead of to a file
+  if (pl->params.coincidencer_host != NULL &&
+      pl->params.coincidencer_port != -1) {
+    try {
+      // Create the socket
+      ClientSocket client_socket(pl->params.coincidencer_host,
+                                 pl->params.coincidencer_port);
+      // Write the data
+      client_socket << ss.str();
+    } catch (SocketException &e) {
+      std::cerr << "SocketException was caught:" << e.description() << "\n";
     }
+  } else {
+    // Create the file
+    std::string filename = std::string(pl->params.output_dir) + "/gians.cand";
+    std::ofstream cand_file(filename.c_str(), std::ios::app);
+    // Write the stream
+    cand_file << ss.rdbuf();
+    // Cleanup
+    cand_file.close();
   }
-
-  fclose(giants_out);
+  // Flush and clear
+  ss.flush();
+  ss.str("");
 
   stop_timer(candidates_timer);
 
