@@ -141,16 +141,10 @@ hd_error allocate_gpu(const hd_pipeline pl) {
   return HD_NO_ERROR;
 }
 
+// Uses the compiler builtin to count leading zeros to get the log2 of the 32bit
+// power of two filter_width Twice as fast as the LUT solution
 unsigned int get_filter_index(unsigned int filter_width) {
-  // This function finds log2 of the 32-bit power-of-two number v
-  unsigned int v = filter_width;
-  static const unsigned int b[] = {0xAAAAAAAA, 0xCCCCCCCC, 0xF0F0F0F0,
-                                   0xFF00FF00, 0xFFFF0000};
-  register unsigned int r = (v & b[0]) != 0;
-  for (int i = 4; i > 0; --i) {
-    r |= ((v & b[i]) != 0) << i;
-  }
-  return r;
+  return sizeof(unsigned int) * 8 - __builtin_clz(filter_width) - 1;
 }
 
 hd_error hd_create_pipeline(hd_pipeline *pipeline_, hd_params params) {
