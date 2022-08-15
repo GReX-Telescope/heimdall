@@ -1,6 +1,9 @@
-<<<<<<< HEAD
-# multibeam version of heimdall code
-=======
-# dsa110-mbheimdall
-Multibeam FRB heimdall search code
->>>>>>> fa35eb487e93b4142e25a47e7765cf4aaba01c12
+# heimdall-astro
+
+GReX-specific fork of the heimdall search pipleline.
+
+Notable changes include:
+
+- Not clustering the output
+- Appending candidiates to a single file
+- No RFI cleaning
