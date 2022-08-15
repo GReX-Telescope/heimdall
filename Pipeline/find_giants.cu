@@ -130,7 +130,7 @@ public:
     }
 
 #ifdef PRINT_BENCHMARKS
-    cudaThreadSynchronize();
+    cudaDeviceSynchronize();
     timer.stop();
     std::cout << "count_if time:           " << timer.getTime() << " s"
               << std::endl;
@@ -143,7 +143,7 @@ public:
     d_giant_data_inds.resize(giant_data_count);
 
 #ifdef PRINT_BENCHMARKS
-    cudaThreadSynchronize();
+    cudaDeviceSynchronize();
     timer.stop();
     std::cout << "giant_data resize time:  " << timer.getTime() << " s"
               << std::endl;
@@ -169,7 +169,7 @@ public:
             make_tuple(d_giant_data.begin(), d_giant_data_inds.begin()));
 
 #ifdef PRINT_BENCHMARKS
-    cudaThreadSynchronize();
+    cudaDeviceSynchronize();
     timer.stop();
     std::cout << "giant_data copy_if time: " << timer.getTime() << " s"
               << std::endl;
@@ -203,7 +203,7 @@ public:
     hd_size giant_count = d_giant_data_seg_ids.back() + 1;
 
 #ifdef PRINT_BENCHMARKS
-    cudaThreadSynchronize();
+    cudaDeviceSynchronize();
     timer.stop();
     std::cout << "giant segments time:     " << timer.getTime() << " s"
               << std::endl;
@@ -224,7 +224,7 @@ public:
     size_ptr new_giant_ends_begin(&d_giant_ends[new_giants_offset]);
 
 #ifdef PRINT_BENCHMARKS
-    cudaThreadSynchronize();
+    cudaDeviceSynchronize();
     timer.stop();
     std::cout << "giants resize time:      " << timer.getTime() << " s"
               << std::endl;
@@ -250,7 +250,7 @@ public:
             make_tuple(new_giant_peaks_begin, new_giant_inds_begin));
 
 #ifdef PRINT_BENCHMARKS
-    cudaThreadSynchronize();
+    cudaDeviceSynchronize();
     timer.stop();
     std::cout << "reduce_by_key time:      " << timer.getTime() << " s"
               << std::endl;
@@ -280,7 +280,7 @@ public:
     }
 
 #ifdef PRINT_BENCHMARKS
-    cudaThreadSynchronize();
+    cudaDeviceSynchronize();
     timer.stop();
     std::cout << "begin/end copy_if time:  " << timer.getTime() << " s"
               << std::endl;
