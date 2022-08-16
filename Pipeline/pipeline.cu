@@ -67,6 +67,10 @@ struct hd_pipeline_t {
   thrust::host_vector<hd_byte> h_dm_series;
   thrust::device_vector<hd_float> d_time_series;
   thrust::device_vector<hd_float> d_filtered_series;
+  // Exfil options
+  int socket;
+  sockaddr_in dest_addr;
+  std::ofstream file;
 };
 
 void write_candidate_line(hd_pipeline pl, hd_size nsamps, hd_size first_idx,
@@ -200,6 +204,22 @@ hd_error hd_create_pipeline(hd_pipeline *pipeline_, hd_params params) {
   smart_pipeline_ptr pipeline = smart_pipeline_ptr(new hd_pipeline_t());
   if (!pipeline.get()) {
     return throw_error(HD_MEM_ALLOC_FAILED);
+  }
+
+  // Setup the writing context
+  if (params.coincidencer_host != NULL && params.coincidencer_port != -1) {
+    // Create the socket
+    int sock = ::socket(AF_INET, SOCK_DGRAM, 0);
+    sockaddr_in dest_addr;
+    dest_addr.sin_family = AF_INET;
+    dest_addr.sin_port = htons(params.coincidencer_port);
+    dest_addr.sin_addr.s_addr = inet_addr(params.coincidencer_host);
+    pipeline->socket = sock;
+    pipeline->dest_addr = dest_addr;
+  } else {
+    // Create the file
+    std::string filename = std::string(params.output_dir) + "/gians.cand";
+    pipeline->file = std::ofstream(filename.c_str(), std::ios::app);
   }
 
   pipeline->params = params;
@@ -664,24 +684,11 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
   // If we have a coincidencer, write output to that, instead of to a file
   if (pl->params.coincidencer_host != NULL &&
       pl->params.coincidencer_port != -1) {
-    // Create the socket
-    int sock = ::socket(AF_INET, SOCK_DGRAM, 0);
-    sockaddr_in destination;
-    destination.sin_family = AF_INET;
-    destination.sin_port = htons(pl->params.coincidencer_port);
-    destination.sin_addr.s_addr = inet_addr(pl->params.coincidencer_host);
-    int n_bytes = ::sendto(sock, ss.str().c_str(), ss.str().length(), 0,
-                           reinterpret_cast<sockaddr *>(&destination),
-                           sizeof(destination));
-    ::close(sock);
+    int n_bytes = ::sendto(pl->socket, ss.str().c_str(), ss.str().length(), 0,
+                           reinterpret_cast<sockaddr *>(&pl->dest_addr),
+                           sizeof(pl->dest_addr));
   } else {
-    // Create the file
-    std::string filename = std::string(pl->params.output_dir) + "/gians.cand";
-    std::ofstream cand_file(filename.c_str(), std::ios::app);
-    // Write the stream
-    cand_file << ss.rdbuf();
-    // Cleanup
-    cand_file.close();
+    pl->file << ss.rdbuf();
   }
   // Flush and clear
   ss.flush();
@@ -724,6 +731,14 @@ void hd_destroy_pipeline(hd_pipeline pipeline) {
   }
 
   dedisp_destroy_plan(pipeline->dedispersion_plan);
+
+  // Close the writing contexts
+  if (pipeline->params.coincidencer_host != NULL &&
+      pipeline->params.coincidencer_port != -1) {
+    ::close(pipeline->socket);
+  } else {
+    pipeline->file.close();
+  }
 
   // Note: This assumes memory owned by pipeline cleans itself up
   if (pipeline) {
