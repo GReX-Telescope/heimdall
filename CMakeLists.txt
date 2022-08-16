@@ -25,8 +25,7 @@ thrust_create_target(Thrust)
 # Boost
 find_package(Boost REQUIRED)
 # Dedisp
-find_package(Dedisp REQUIRED)
-message(STATUS "Found Dedisp")
+add_subdirectory(dedisp)
 # PSRDada
 find_package(PSRDada)
 
