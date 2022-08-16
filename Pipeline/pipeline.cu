@@ -9,9 +9,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
-using std::cerr;
-using std::cout;
-using std::endl;
+
 #include <algorithm>
 #include <fstream>
 #include <functional>
@@ -23,8 +21,7 @@ using std::endl;
 
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
-using thrust::device_vector;
-using thrust::host_vector;
+
 #include <thrust/copy.h>
 #include <thrust/extrema.h>
 #include <thrust/fill.h>
@@ -50,50 +47,26 @@ using thrust::host_vector;
 #include "hd/merge_candidates.hpp"
 #include "hd/remove_baseline.hpp"
 
-#include "hd/ClientSocket.hpp"
 #include "hd/DataSource.hpp"
-#include "hd/SocketException.hpp"
 #include "hd/stopwatch.hpp" // For benchmarking
 
 #include <dedisp.h>
 
-void tfunc(std::vector<hd_byte> &vec) {
-  hd_byte *ddata = (hd_byte *)malloc(sizeof(hd_byte) * 200);
-  std::copy(vec.begin(), vec.end(), ddata);
-  std::copy(vec.begin(), vec.end(), ddata + 100);
-
-  for (int i = 0; i < 200; i++)
-    cout << +ddata[i] << " ";
-  cout << " " << endl;
-
-  free(ddata);
-}
-
-#define HD_BENCHMARK
-
-#ifdef HD_BENCHMARK
-void start_timer(Stopwatch &timer) { timer.start(); }
-void stop_timer(Stopwatch &timer) {
-  cudaDeviceSynchronize();
-  timer.stop();
-}
-#else
-void start_timer(Stopwatch &timer) {}
-void stop_timer(Stopwatch &timer) {}
-#endif // HD_BENCHMARK
-
-template <typename T, typename U> std::pair<T &, U &> tie(T &a, U &b) {
-  return std::pair<T &, U &>(a, b);
-}
+// Socket stuff
+#include <arpa/inet.h>  // htons, inet_addr
+#include <netinet/in.h> // sockaddr_in
+#include <sys/socket.h> // socket, sendto
+#include <sys/types.h>  // uint16_t
+#include <unistd.h>     // close
 
 struct hd_pipeline_t {
   hd_params params;
   dedisp_plan dedispersion_plan;
   // Memory buffers used during pipeline execution
   std::vector<hd_byte> h_clean_filterbank;
-  host_vector<hd_byte> h_dm_series;
-  device_vector<hd_float> d_time_series;
-  device_vector<hd_float> d_filtered_series;
+  thrust::host_vector<hd_byte> h_dm_series;
+  thrust::device_vector<hd_float> d_time_series;
+  thrust::device_vector<hd_float> d_filtered_series;
 };
 
 void write_candidate_line(hd_pipeline pl, hd_size nsamps, hd_size first_idx,
@@ -138,6 +111,35 @@ void write_candidate_line(hd_pipeline pl, hd_size nsamps, hd_size first_idx,
   }
 }
 
+void tfunc(std::vector<hd_byte> &vec) {
+  hd_byte *ddata = (hd_byte *)malloc(sizeof(hd_byte) * 200);
+  std::copy(vec.begin(), vec.end(), ddata);
+  std::copy(vec.begin(), vec.end(), ddata + 100);
+
+  for (int i = 0; i < 200; i++)
+    std::cout << +ddata[i] << " ";
+  std::cout << " " << std::endl;
+
+  free(ddata);
+}
+
+#define HD_BENCHMARK
+
+#ifdef HD_BENCHMARK
+void start_timer(Stopwatch &timer) { timer.start(); }
+void stop_timer(Stopwatch &timer) {
+  cudaDeviceSynchronize();
+  timer.stop();
+}
+#else
+void start_timer(Stopwatch &timer) {}
+void stop_timer(Stopwatch &timer) {}
+#endif // HD_BENCHMARK
+
+template <typename T, typename U> std::pair<T &, U &> tie(T &a, U &b) {
+  return std::pair<T &, U &>(a, b);
+}
+
 hd_error allocate_gpu(const hd_pipeline pl) {
   // This is just a simple proc-->GPU heuristic to get us started
   int gpu_count;
@@ -147,18 +149,20 @@ hd_error allocate_gpu(const hd_pipeline pl) {
 
   cudaError_t cerror = cudaSetDevice(gpu_idx);
   if (cerror != cudaSuccess) {
-    cerr << "Could not setCudaDevice to " << gpu_idx << ": "
-         << cudaGetErrorString(cerror) << endl;
+    std::cerr << "Could not setCudaDevice to " << gpu_idx << ": "
+              << cudaGetErrorString(cerror) << std::endl;
     return throw_cuda_error(cerror);
   }
 
   if (pl->params.verbosity >= 1) {
-    cout << "Process " << proc_idx << " using GPU " << gpu_idx << endl;
+    std::cout << "Process " << proc_idx << " using GPU " << gpu_idx
+              << std::endl;
   }
 
   if (!pl->params.yield_cpu) {
     if (pl->params.verbosity >= 2) {
-      cout << "\tProcess " << proc_idx << " setting CPU to spin" << endl;
+      std::cout << "\tProcess " << proc_idx << " setting CPU to spin"
+                << std::endl;
     }
     cerror = cudaSetDeviceFlags(cudaDeviceScheduleSpin);
     if (cerror != cudaSuccess) {
@@ -166,7 +170,8 @@ hd_error allocate_gpu(const hd_pipeline pl) {
     }
   } else {
     if (pl->params.verbosity >= 2) {
-      cout << "\tProcess " << proc_idx << " setting CPU to yield" << endl;
+      std::cout << "\tProcess " << proc_idx << " setting CPU to yield"
+                << std::endl;
     }
     // Note: This Yield flag doesn't seem to work properly.
     //   The BlockingSync flag does the job, although it may interfere
@@ -200,7 +205,7 @@ hd_error hd_create_pipeline(hd_pipeline *pipeline_, hd_params params) {
   pipeline->params = params;
 
   if (params.verbosity >= 2) {
-    cout << "\tAllocating GPU..." << endl;
+    std::cout << "\tAllocating GPU..." << std::endl;
   }
 
   hd_error error = allocate_gpu(pipeline.get());
@@ -209,15 +214,15 @@ hd_error hd_create_pipeline(hd_pipeline *pipeline_, hd_params params) {
   }
 
   if (params.verbosity >= 1) {
-    cout << "nchans = " << params.nchans << endl;
-    cout << "dt     = " << params.dt << endl;
-    cout << "f0     = " << params.f0 << endl;
-    cout << "df     = " << params.df << endl;
-    cout << "nsnap     = " << params.nsnap << endl;
+    std::cout << "nchans = " << params.nchans << std::endl;
+    std::cout << "dt     = " << params.dt << std::endl;
+    std::cout << "f0     = " << params.f0 << std::endl;
+    std::cout << "df     = " << params.df << std::endl;
+    std::cout << "nsnap     = " << params.nsnap << std::endl;
   }
 
   if (params.verbosity >= 2) {
-    cout << "\tCreating dedispersion plan..." << endl;
+    std::cout << "\tCreating dedispersion plan..." << std::endl;
   }
 
   dedisp_error derror;
@@ -247,12 +252,13 @@ hd_error hd_create_pipeline(hd_pipeline *pipeline_, hd_params params) {
   *pipeline_ = pipeline.release();
 
   if (params.verbosity >= 2) {
-    cout << "\tInitialisation complete." << endl;
+    std::cout << "\tInitialisation complete." << std::endl;
   }
 
   if (params.verbosity >= 1) {
-    cout << "Using Thrust v" << THRUST_MAJOR_VERSION << "."
-         << THRUST_MINOR_VERSION << "." << THRUST_SUBMINOR_VERSION << endl;
+    std::cout << "Using Thrust v" << THRUST_MAJOR_VERSION << "."
+              << THRUST_MINOR_VERSION << "." << THRUST_SUBMINOR_VERSION
+              << std::endl;
   }
 
   return HD_NO_ERROR;
@@ -304,28 +310,31 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
                                            h_killmask.end());
   hd_size bad_chan_count = pl->params.nchans - good_chan_count;
   if( pl->params.verbosity >= 2 ) {
-    cout << "Bad channel count = " << bad_chan_count << endl;
+   std::cout << "Bad channel count = " << bad_chan_count << std::endl;
   }
   */
   stop_timer(clean_timer);
 
   if (pl->params.verbosity >= 2) {
-    cout << "\tGenerating DM list..." << endl;
+    std::cout << "\tGenerating DM list..." << std::endl;
   }
 
   if (pl->params.verbosity >= 3) {
-    cout << "dm_min = " << pl->params.dm_min << endl;
-    cout << "dm_max = " << pl->params.dm_max << endl;
-    cout << "dm_tol = " << pl->params.dm_tol << endl;
-    cout << "dm_pulse_width = " << pl->params.dm_pulse_width << endl;
-    cout << "nchans = " << pl->params.nchans << endl;
-    cout << "dt = " << pl->params.dt << endl;
+    std::cout << "dm_min = " << pl->params.dm_min << std::endl;
+    std::cout << "dm_max = " << pl->params.dm_max << std::endl;
+    std::cout << "dm_tol = " << pl->params.dm_tol << std::endl;
+    std::cout << "dm_pulse_width = " << pl->params.dm_pulse_width << std::endl;
+    std::cout << "nchans = " << pl->params.nchans << std::endl;
+    std::cout << "dt = " << pl->params.dt << std::endl;
 
-    cout << "dedisp nchans = "
-         << dedisp_get_channel_count(pl->dedispersion_plan) << endl;
-    cout << "dedisp dt = " << dedisp_get_dt(pl->dedispersion_plan) << endl;
-    cout << "dedisp f0 = " << dedisp_get_f0(pl->dedispersion_plan) << endl;
-    cout << "dedisp df = " << dedisp_get_df(pl->dedispersion_plan) << endl;
+    std::cout << "dedisp nchans = "
+              << dedisp_get_channel_count(pl->dedispersion_plan) << std::endl;
+    std::cout << "dedisp dt = " << dedisp_get_dt(pl->dedispersion_plan)
+              << std::endl;
+    std::cout << "dedisp f0 = " << dedisp_get_f0(pl->dedispersion_plan)
+              << std::endl;
+    std::cout << "dedisp df = " << dedisp_get_df(pl->dedispersion_plan)
+              << std::endl;
   }
 
   hd_size dm_count = dedisp_get_dm_count(pl->dedispersion_plan);
@@ -334,19 +343,19 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
   const dedisp_size *scrunch_factors =
       dedisp_get_dt_factors(pl->dedispersion_plan);
   if (pl->params.verbosity >= 3) {
-    cout << "DM List for " << pl->params.dm_min << " to " << pl->params.dm_max
-         << endl;
+    std::cout << "DM List for " << pl->params.dm_min << " to "
+              << pl->params.dm_max << std::endl;
     for (hd_size i = 0; i < dm_count; ++i) {
-      cout << dm_list[i] << endl;
+      std::cout << dm_list[i] << std::endl;
     }
   }
 
   if (pl->params.verbosity >= 2) {
-    cout << "Scrunch factors:" << endl;
+    std::cout << "Scrunch factors:" << std::endl;
     for (hd_size i = 0; i < dm_count; ++i) {
-      cout << scrunch_factors[i] << " ";
+      std::cout << scrunch_factors[i] << " ";
     }
-    cout << endl;
+    std::cout << std::endl;
   }
 
   // Set channel killmask for dedispersion
@@ -359,10 +368,10 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
   *nsamps_processed = nsamps_computed - pl->params.boxcar_max;
 
   if (pl->params.verbosity >= 3) {
-    cout << "dm_count = " << dm_count << endl;
-    cout << "max delay = " << dedisp_get_max_delay(pl->dedispersion_plan)
-         << endl;
-    cout << "nsamps_computed = " << nsamps_computed << endl;
+    std::cout << "dm_count = " << dm_count << std::endl;
+    std::cout << "max delay = " << dedisp_get_max_delay(pl->dedispersion_plan)
+              << std::endl;
+    std::cout << "nsamps_computed = " << nsamps_computed << std::endl;
   }
 
   start_timer(memory_timer);
@@ -392,8 +401,8 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
   typedef thrust::device_ptr<hd_size> dev_size_ptr;
 
   if (pl->params.verbosity >= 2) {
-    cout << "\tDedispersing for DMs " << dm_list[0] << " to "
-         << dm_list[dm_count - 1] << "..." << endl;
+    std::cout << "\tDedispersing for DMs " << dm_list[0] << " to "
+              << dm_list[dm_count - 1] << "..." << std::endl;
   }
 
   // Dedisperse
@@ -417,7 +426,7 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
   }
 
   if (pl->params.verbosity >= 2) {
-    cout << "\tBeginning inner pipeline..." << endl;
+    std::cout << "\tBeginning inner pipeline..." << std::endl;
   }
 
   bool too_many_giants = false;
@@ -441,13 +450,13 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
       }
 
       if (pl->params.verbosity >= 4) {
-        cout << "dm_idx     = " << dm_idx << endl;
-        cout << "scrunch    = " << scrunch_factors[dm_idx] << endl;
-        cout << "cur_nsamps = " << cur_nsamps << endl;
-        cout << "dt0        = " << pl->params.dt << endl;
-        cout << "cur_dt     = " << cur_dt << endl;
+        std::cout << "dm_idx     = " << dm_idx << std::endl;
+        std::cout << "scrunch    = " << scrunch_factors[dm_idx] << std::endl;
+        std::cout << "cur_nsamps = " << cur_nsamps << std::endl;
+        std::cout << "dt0        = " << pl->params.dt << std::endl;
+        std::cout << "cur_dt     = " << cur_dt << std::endl;
 
-        cout << "\tBaselining and normalising each beam..." << endl;
+        std::cout << "\tBaselining and normalising each beam..." << std::endl;
       }
 
       hd_float *time_series = thrust::raw_pointer_cast(&pl->d_time_series[0]);
@@ -547,7 +556,8 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
         hd_size filter_idx = filter_width;
 
         if (pl->params.verbosity >= 4) {
-          cout << "Filtering each beam at width of " << filter_width << endl;
+          std::cout << "Filtering each beam at width of " << filter_width
+                    << std::endl;
         }
 
         // Note: Filter width is relative to the current time resolution
@@ -597,19 +607,20 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
         hd_size rel_cur_filtered_offset =
             (cur_filtered_offset / rel_tscrunch_width);
 
-        using namespace thrust::placeholders;
-        thrust::transform(d_giant_inds.begin() + prev_giant_count,
-                          d_giant_inds.end(),
-                          d_giant_inds.begin() + prev_giant_count,
-                          (_1 + rel_cur_filtered_offset) * cur_scrunch);
-        thrust::transform(d_giant_begins.begin() + prev_giant_count,
-                          d_giant_begins.end(),
-                          d_giant_begins.begin() + prev_giant_count,
-                          (_1 + rel_cur_filtered_offset) * cur_scrunch);
-        thrust::transform(d_giant_ends.begin() + prev_giant_count,
-                          d_giant_ends.end(),
-                          d_giant_ends.begin() + prev_giant_count,
-                          (_1 + rel_cur_filtered_offset) * cur_scrunch);
+        auto transform_fn = [rel_cur_filtered_offset,
+                             cur_scrunch] __device__(hd_size a) {
+          return (a + rel_cur_filtered_offset) * cur_scrunch;
+        };
+
+        thrust::transform(
+            d_giant_inds.begin() + prev_giant_count, d_giant_inds.end(),
+            d_giant_inds.begin() + prev_giant_count, transform_fn);
+        thrust::transform(
+            d_giant_begins.begin() + prev_giant_count, d_giant_begins.end(),
+            d_giant_begins.begin() + prev_giant_count, transform_fn);
+        thrust::transform(
+            d_giant_ends.begin() + prev_giant_count, d_giant_ends.end(),
+            d_giant_ends.begin() + prev_giant_count, transform_fn);
 
         d_giant_filter_inds.resize(d_giant_peaks.size(), filter_idx);
         d_giant_dm_inds.resize(d_giant_peaks.size(), dm_idx);
@@ -625,10 +636,11 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
         if (total_timer.getTime() > 3500 || total_giant_count > 1000000) {
           too_many_giants = true;
           float searched = ((float)dm_idx * 100) / (float)dm_count;
-          cout << "WARNING: exceeded processing time / giant count: 3.5s, 10k "
-                  "DM ["
-               << dm_list[dm_idx] << "] space searched " << searched << "%"
-               << endl;
+          std::cout
+              << "WARNING: exceeded processing time / giant count: 3.5s, 10k "
+                 "DM ["
+              << dm_list[dm_idx] << "] space searched " << searched << "%"
+              << std::endl;
           break;
         }
 
@@ -639,10 +651,12 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
   } // close gulp_idx condition
 
   hd_size giant_count = d_giant_peaks.size();
-  cout << "Giant count = " << giant_count << endl;
-  cout << "final_space_searched " << dm_list[dm_idx_output] << endl;
+  std::cout << "Giant count = " << giant_count << std::endl;
+  std::cout << "final_space_searched " << dm_list[dm_idx_output] << std::endl;
 
   std::stringstream ss("");
+  // Set some formatting parameters
+  ss << std::setw(2) << std::setfill('0');
   // Fill in the data
   write_candidate_line(pl, nsamps, first_idx, nsamps_computed, dm_list,
                        d_giant_peaks, d_giant_inds, d_giant_filter_inds,
@@ -650,15 +664,16 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
   // If we have a coincidencer, write output to that, instead of to a file
   if (pl->params.coincidencer_host != NULL &&
       pl->params.coincidencer_port != -1) {
-    try {
-      // Create the socket
-      ClientSocket client_socket(pl->params.coincidencer_host,
-                                 pl->params.coincidencer_port);
-      // Write the data
-      client_socket << ss.str();
-    } catch (SocketException &e) {
-      std::cerr << "SocketException was caught:" << e.description() << "\n";
-    }
+    // Create the socket
+    int sock = ::socket(AF_INET, SOCK_DGRAM, 0);
+    sockaddr_in destination;
+    destination.sin_family = AF_INET;
+    destination.sin_port = htons(pl->params.coincidencer_port);
+    destination.sin_addr.s_addr = inet_addr(pl->params.coincidencer_host);
+    int n_bytes = ::sendto(sock, ss.str().c_str(), ss.str().length(), 0,
+                           reinterpret_cast<sockaddr *>(&destination),
+                           sizeof(destination));
+    ::close(sock);
   } else {
     // Create the file
     std::string filename = std::string(pl->params.output_dir) + "/gians.cand";
@@ -676,16 +691,25 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
 
   stop_timer(total_timer);
 
-  cout << "Mem alloc time:          " << memory_timer.getTime() << endl;
-  cout << "0-DM cleaning time:      " << clean_timer.getTime() << endl;
-  cout << "Dedispersion time:       " << dedisp_timer.getTime() << endl;
-  cout << "Copy time:               " << copy_timer.getTime() << endl;
-  cout << "Baselining time:         " << baseline_timer.getTime() << endl;
-  cout << "Normalisation time:      " << normalise_timer.getTime() << endl;
-  cout << "Filtering time:          " << filter_timer.getTime() << endl;
-  cout << "Find giants time:        " << giants_timer.getTime() << endl;
-  cout << "Process candidates time: " << candidates_timer.getTime() << endl;
-  cout << "Total time:              " << total_timer.getTime() << endl;
+  std::cout << "Mem alloc time:          " << memory_timer.getTime()
+            << std::endl;
+  std::cout << "0-DM cleaning time:      " << clean_timer.getTime()
+            << std::endl;
+  std::cout << "Dedispersion time:       " << dedisp_timer.getTime()
+            << std::endl;
+  std::cout << "Copy time:               " << copy_timer.getTime() << std::endl;
+  std::cout << "Baselining time:         " << baseline_timer.getTime()
+            << std::endl;
+  std::cout << "Normalisation time:      " << normalise_timer.getTime()
+            << std::endl;
+  std::cout << "Filtering time:          " << filter_timer.getTime()
+            << std::endl;
+  std::cout << "Find giants time:        " << giants_timer.getTime()
+            << std::endl;
+  std::cout << "Process candidates time: " << candidates_timer.getTime()
+            << std::endl;
+  std::cout << "Total time:              " << total_timer.getTime()
+            << std::endl;
 
   if (too_many_giants) {
     return HD_TOO_MANY_EVENTS;
@@ -696,7 +720,7 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
 
 void hd_destroy_pipeline(hd_pipeline pipeline) {
   if (pipeline->params.verbosity >= 2) {
-    cout << "\tDeleting pipeline object..." << endl;
+    std::cout << "\tDeleting pipeline object..." << std::endl;
   }
 
   dedisp_destroy_plan(pipeline->dedispersion_plan);

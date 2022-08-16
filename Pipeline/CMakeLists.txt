@@ -21,3 +21,5 @@ target_include_directories(hdpipeline PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../Ne
 target_include_directories(hdpipeline PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../Formats")
 
 set_target_properties(hdpipeline PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
+target_compile_options(hdpipeline PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda>)
