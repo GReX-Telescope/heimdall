@@ -113,7 +113,7 @@ void write_candidate_line(hd_pipeline pl, hd_size nsamps, hd_size first_idx,
              << "\t" << giant_dm_inds[i] << "\t" << dm_list[giant_dm_inds[i]]
              << "\t" << beam_no << std::endl;
           // Serialize
-          // If we have a coincidencer, write output to that, 
+          // If we have a coincidencer, write output to that,
           // instead of to a file
           if (pl->params.coincidencer_host != NULL &&
               pl->params.coincidencer_port != -1) {
@@ -227,7 +227,7 @@ hd_error hd_create_pipeline(hd_pipeline *pipeline_, hd_params params) {
   // Setup the writing context
   if (params.coincidencer_host != NULL && params.coincidencer_port != -1) {
     // Create the socket
-    int sock = ::socket(AF_INET, SOCK_DGRAM, 0);
+    int sock = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     sockaddr_in dest_addr;
     dest_addr.sin_family = AF_INET;
     dest_addr.sin_port = htons(params.coincidencer_port);
