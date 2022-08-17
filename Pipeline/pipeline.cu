@@ -78,13 +78,16 @@ void write_candidate_line(hd_pipeline pl, hd_size nsamps, hd_size first_idx,
                           thrust::host_vector<hd_float> giant_peaks,
                           thrust::host_vector<hd_size> giant_inds,
                           thrust::host_vector<hd_size> giant_filter_inds,
-                          thrust::host_vector<hd_size> giant_dm_inds,
-                          std::stringstream &ss) {
+                          thrust::host_vector<hd_size> giant_dm_inds) {
 
   hd_size filterbank_ind;
   hd_size overlap =
       pl->params.boxcar_max + dedisp_get_max_delay(pl->dedispersion_plan);
   hd_size block_size = nsamps - overlap;
+
+  std::stringstream ss("");
+  // Set some formatting parameters
+  ss << std::setw(2) << std::setfill('0');
 
   if (first_idx > 0) {
     for (hd_size i = 0; i < giant_peaks.size(); ++i) {
@@ -109,6 +112,21 @@ void write_candidate_line(hd_pipeline pl, hd_size nsamps, hd_size first_idx,
              << "\t" << samp_idx * pl->params.dt << "\t" << giant_filter_inds[i]
              << "\t" << giant_dm_inds[i] << "\t" << dm_list[giant_dm_inds[i]]
              << "\t" << beam_no << std::endl;
+          // Serialize
+          // If we have a coincidencer, write output to that, 
+          // instead of to a file
+          if (pl->params.coincidencer_host != NULL &&
+              pl->params.coincidencer_port != -1) {
+            int n_bytes =
+                ::sendto(pl->socket, ss.str().c_str(), ss.str().length(), 0,
+                         reinterpret_cast<sockaddr *>(&pl->dest_addr),
+                         sizeof(pl->dest_addr));
+          } else {
+            pl->file << ss.str();
+          }
+          // Flush and clear
+          ss.flush();
+          ss.str("");
         }
       }
     }
@@ -218,7 +236,7 @@ hd_error hd_create_pipeline(hd_pipeline *pipeline_, hd_params params) {
     pipeline->dest_addr = dest_addr;
   } else {
     // Create the file
-    std::string filename = std::string(params.output_dir) + "/gians.cand";
+    std::string filename = std::string(params.output_dir) + "/giants.cand";
     pipeline->file = std::ofstream(filename.c_str(), std::ios::app);
   }
 
@@ -674,25 +692,10 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
   std::cout << "Giant count = " << giant_count << std::endl;
   std::cout << "final_space_searched " << dm_list[dm_idx_output] << std::endl;
 
-  std::stringstream ss("");
-  // Set some formatting parameters
-  ss << std::setw(2) << std::setfill('0');
   // Fill in the data
   write_candidate_line(pl, nsamps, first_idx, nsamps_computed, dm_list,
                        d_giant_peaks, d_giant_inds, d_giant_filter_inds,
-                       d_giant_dm_inds, ss);
-  // If we have a coincidencer, write output to that, instead of to a file
-  if (pl->params.coincidencer_host != NULL &&
-      pl->params.coincidencer_port != -1) {
-    int n_bytes = ::sendto(pl->socket, ss.str().c_str(), ss.str().length(), 0,
-                           reinterpret_cast<sockaddr *>(&pl->dest_addr),
-                           sizeof(pl->dest_addr));
-  } else {
-    pl->file << ss.rdbuf();
-  }
-  // Flush and clear
-  ss.flush();
-  ss.str("");
+                       d_giant_dm_inds);
 
   stop_timer(candidates_timer);
 
