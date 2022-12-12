@@ -1,0 +1,3 @@
+[submodule "dedisp"]
+	path = dedisp
+	url = https://git.astron.nl/RD/dedisp.git
