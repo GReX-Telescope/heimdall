@@ -8,17 +8,19 @@ add_executable(fil2pgm fil2pgm.cpp)
 add_executable(generate_dmlist generate_dmlist.cpp)
 
 # heimdall - main executable
+target_include_directories(heimdall PRIVATE "${DEDISP_INCLUDE_DIR}")
 target_include_directories(heimdall PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../Pipeline")
 target_include_directories(heimdall PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../Formats")
-target_link_libraries(heimdall hdpipeline hdnetwork hdformats)
+target_link_libraries(heimdall hdpipeline hdnetwork hdformats ${Thrust_LIBRARIES} ${Boost_LIBRARIES})
 if (PSRDada_FOUND)
     target_link_libraries(heimdall psrdada)
 endif()
 install(TARGETS heimdall DESTINATION bin)
 
 # candidate_profiler
-target_link_libraries(candidate_profiler hdformats dedisp)
+target_link_libraries(candidate_profiler hdformats ${DEDISP_LIBRARIES})
 target_include_directories(candidate_profiler PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../Formats")
+target_include_directories(candidate_profiler PRIVATE "${DEDISP_INCLUDE_DIR}")
 install(TARGETS candidate_profiler DESTINATION bin)
 
 # coincidencer_client

@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(CMAKE_CUDA_ARCHITECTURES 60 61 62 70 72 75 86)
+set(CMAKE_CUDA_ARCHITECTURES 75 86)
 set(CMAKE_CUDA_STANDARD 17)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
@@ -23,9 +23,10 @@ find_package(CUDAToolkit REQUIRED)
 find_package(Thrust REQUIRED CONFIG)
 thrust_create_target(Thrust)
 # Boost
-find_package(Boost REQUIRED)
+find_package(Boost REQUIRED COMPONENTS system)
 # Dedisp
 add_subdirectory(dedisp)
+set(DEDISP_LIBRARIES "${DEDISP_tdd_LIBRARY}")
 # PSRDada
 find_package(PSRDada)
 
@@ -38,7 +39,6 @@ if (PSRDada_FOUND)
 endif()
 
 # Add headers
-include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}) 
 
 # Add subdirectories
