@@ -122,9 +122,6 @@ void write_candidates(hd_pipeline pl, hd_size nsamps, hd_size first_idx,
                          sizeof(pl->dest_addr));
             if (n_bytes == -1) {
               std::perror("write_candidates failed");
-            } else {
-              std::cout << "Wrote " << n_bytes << " bytes to the socket"
-                        << std::endl;
             }
           } else {
             pl->file << ss.str();
