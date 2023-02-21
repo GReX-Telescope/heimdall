@@ -122,7 +122,11 @@ void write_candidates(hd_pipeline pl, hd_size nsamps, hd_size first_idx,
       int n_bytes = ::sendto(pl->socket, ss.str().c_str(), ss.str().length(), 0,
                              reinterpret_cast<sockaddr *>(&pl->dest_addr),
                              sizeof(pl->dest_addr));
-      std::cout << "Wrote " << n_bytes << " bytes to the socket" << std::endl;
+      if (n_bytes == -1) {
+        std::perror("write_candidates failed");
+      } else {
+        std::cout << "Wrote " << n_bytes << " bytes to the socket" << std::endl;
+      }
     } else {
       pl->file << ss.str();
     }
