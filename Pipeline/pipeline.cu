@@ -73,12 +73,12 @@ struct hd_pipeline_t {
   std::ofstream file;
 };
 
-void write_candidate_line(hd_pipeline pl, hd_size nsamps, hd_size first_idx,
-                          hd_size nsamps_computed, const float *dm_list,
-                          thrust::host_vector<hd_float> giant_peaks,
-                          thrust::host_vector<hd_size> giant_inds,
-                          thrust::host_vector<hd_size> giant_filter_inds,
-                          thrust::host_vector<hd_size> giant_dm_inds) {
+void write_candidates(hd_pipeline pl, hd_size nsamps, hd_size first_idx,
+                      hd_size nsamps_computed, const float *dm_list,
+                      thrust::host_vector<hd_float> giant_peaks,
+                      thrust::host_vector<hd_size> giant_inds,
+                      thrust::host_vector<hd_size> giant_filter_inds,
+                      thrust::host_vector<hd_size> giant_dm_inds) {
 
   hd_size filterbank_ind;
   hd_size overlap =
@@ -112,23 +112,18 @@ void write_candidate_line(hd_pipeline pl, hd_size nsamps, hd_size first_idx,
              << "\t" << samp_idx * pl->params.dt << "\t" << giant_filter_inds[i]
              << "\t" << giant_dm_inds[i] << "\t" << dm_list[giant_dm_inds[i]]
              << "\t" << beam_no << std::endl;
-          // Serialize
-          // If we have a coincidencer, write output to that,
-          // instead of to a file
-          if (pl->params.coincidencer_host != NULL &&
-              pl->params.coincidencer_port != -1) {
-            int n_bytes =
-                ::sendto(pl->socket, ss.str().c_str(), ss.str().length(), 0,
-                         reinterpret_cast<sockaddr *>(&pl->dest_addr),
-                         sizeof(pl->dest_addr));
-          } else {
-            pl->file << ss.str();
-          }
-          // Flush and clear
-          ss.flush();
-          ss.str("");
         }
       }
+    }
+    // If we have a coincidencer, write output to that,
+    // instead of to a file
+    if (pl->params.coincidencer_host != NULL &&
+        pl->params.coincidencer_port != -1) {
+      int n_bytes = ::sendto(pl->socket, ss.str().c_str(), ss.str().length(), 0,
+                             reinterpret_cast<sockaddr *>(&pl->dest_addr),
+                             sizeof(pl->dest_addr));
+    } else {
+      pl->file << ss.str();
     }
   }
 }
@@ -693,9 +688,9 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
   std::cout << "final_space_searched " << dm_list[dm_idx_output] << std::endl;
 
   // Fill in the data
-  write_candidate_line(pl, nsamps, first_idx, nsamps_computed, dm_list,
-                       d_giant_peaks, d_giant_inds, d_giant_filter_inds,
-                       d_giant_dm_inds);
+  write_candidates(pl, nsamps, first_idx, nsamps_computed, dm_list,
+                   d_giant_peaks, d_giant_inds, d_giant_filter_inds,
+                   d_giant_dm_inds);
 
   stop_timer(candidates_timer);
 
