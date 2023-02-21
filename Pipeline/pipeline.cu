@@ -112,23 +112,37 @@ void write_candidates(hd_pipeline pl, hd_size nsamps, hd_size first_idx,
              << "\t" << samp_idx * pl->params.dt << "\t" << giant_filter_inds[i]
              << "\t" << giant_dm_inds[i] << "\t" << dm_list[giant_dm_inds[i]]
              << "\t" << beam_no << std::endl;
+          // If we have a coincidencer, write output to that,
+          // instead of to a file
+          if (pl->params.coincidencer_host != NULL &&
+              pl->params.coincidencer_port != -1) {
+            int n_bytes =
+                ::sendto(pl->socket, ss.str().c_str(), ss.str().length(), 0,
+                         reinterpret_cast<sockaddr *>(&pl->dest_addr),
+                         sizeof(pl->dest_addr));
+            if (n_bytes == -1) {
+              std::perror("write_candidates failed");
+            } else {
+              std::cout << "Wrote " << n_bytes << " bytes to the socket"
+                        << std::endl;
+            }
+          } else {
+            pl->file << ss.str();
+          }
+          ss.str("");
         }
       }
     }
-    // If we have a coincidencer, write output to that,
-    // instead of to a file
+    // If we're writing to a socket, send an ETX (end of text, hex 3)
     if (pl->params.coincidencer_host != NULL &&
         pl->params.coincidencer_port != -1) {
-      int n_bytes = ::sendto(pl->socket, ss.str().c_str(), ss.str().length(), 0,
+      char byte[] = {0x3};
+      int n_bytes = ::sendto(pl->socket, byte, 1, 0,
                              reinterpret_cast<sockaddr *>(&pl->dest_addr),
                              sizeof(pl->dest_addr));
       if (n_bytes == -1) {
-        std::perror("write_candidates failed");
-      } else {
-        std::cout << "Wrote " << n_bytes << " bytes to the socket" << std::endl;
+        std::perror("sending socket etx failed");
       }
-    } else {
-      pl->file << ss.str();
     }
   }
 }
