@@ -10,7 +10,6 @@
 #include <stdexcept>
 
 using std::cerr;
-using std::cout;
 using std::endl;
 
 #include "hd/SigprocFile.hpp"
@@ -82,8 +81,8 @@ size_t SigprocFile::get_data(size_t nsamps, char *data) {
       }
       float mean = sum / nfloats;
 
-      offset = (2 ^ 31) - mean;
-      scale = (max_float - min_float) / (2 ^ 28);
+      offset = (1LL << 31) - mean;
+      scale = (max_float - min_float) / (1 << 28);
       first_time = false;
     }
 

@@ -7,8 +7,6 @@
 
 #include "hd/Candidates.hpp"
 
-#include "tmutil.h"
-
 #include <fstream>
 
 #include <libgen.h>
@@ -51,8 +49,6 @@ Candidate::Candidate(const char *line, unsigned _beam_number) {
 }
 
 Candidate::~Candidate() {
-  // cerr << "Candiate::~Candidate beam=" << beam << " sample_idx=" <<
-  // sample_idx << endl;
 }
 
 void Candidate::header() {

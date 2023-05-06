@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 
 # Setup project definition
-project(heimdall VERSION 0.1 LANGUAGES CUDA CXX)
+project(heimdall VERSION 0.1 LANGUAGES CXX CUDA)
 
 # specify the C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -17,8 +17,6 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Define dependencies
 include(GNUInstallDirs)
-# CUDAToolkit
-find_package(CUDAToolkit REQUIRED)
 # Thrust
 find_package(Thrust REQUIRED CONFIG)
 thrust_create_target(Thrust)
