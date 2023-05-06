@@ -17,6 +17,8 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Define dependencies
 include(GNUInstallDirs)
+# CUDA
+find_package(CUDA REQUIRED)
 # Thrust
 find_package(Thrust REQUIRED CONFIG)
 thrust_create_target(Thrust)
