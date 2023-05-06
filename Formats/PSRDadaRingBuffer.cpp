@@ -16,6 +16,7 @@ using std::endl;
 #include "hd/PSRDadaRingBuffer.hpp"
 
 #include "ascii_header.h"
+#include "tmutil.h"
 
 //#define _DEBUG
 
