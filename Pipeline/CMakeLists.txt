@@ -14,7 +14,7 @@ add_library(hdpipeline
     median_filter.cu
     matched_filter.cu)
 
-target_link_libraries(hdpipeline hdnetwork hdformats Thrust ${Boost_LIBRARIES} dedisp CUDA::cudart CUDA::cuda_driver)
+target_link_libraries(hdpipeline hdnetwork hdformats Thrust ${Boost_LIBRARIES} dedisp)
 
 target_include_directories(hdpipeline PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(hdpipeline PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../Network")
