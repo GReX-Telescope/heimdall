@@ -19,9 +19,6 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 include(GNUInstallDirs)
 # CUDA
 find_package(CUDAToolkit REQUIRED)
-# Thrust
-find_package(Thrust REQUIRED CONFIG)
-thrust_create_target(Thrust)
 # Boost
 find_package(Boost REQUIRED)
 # Dedisp
@@ -32,8 +29,6 @@ find_package(PSRDada)
 if (PSRDada_FOUND)
   set(HAVE_PSRDADA on)
   add_compile_definitions(HAVE_PSRDADA)
-  find_package(rdmacm REQUIRED)
-  set(HAVE_RDMACM on)
   message(STATUS "Found PSRDada")
 endif()
 
