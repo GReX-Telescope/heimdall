@@ -682,11 +682,11 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
         hd_size total_giant_count = d_giant_peaks.size();
         hd_float data_length_mins = nsamps * pl->params.dt / 60.0;
 
-        if (total_timer.getTime() > 3500 || total_giant_count > 1000000) {
+        if (total_giant_count > 1000000) {
           too_many_giants = true;
           float searched = ((float)dm_idx * 100) / (float)dm_count;
           std::cout
-              << "WARNING: exceeded processing time / giant count: 3.5s, 10k "
+              << "WARNING: exceeded giant count: 10k "
                  "DM ["
               << dm_list[dm_idx] << "] space searched " << searched << "%"
               << std::endl;
