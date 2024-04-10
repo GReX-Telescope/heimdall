@@ -23,9 +23,9 @@ find_package(CUDAToolkit REQUIRED)
 find_package(Boost REQUIRED)
 # Dedisp
 add_subdirectory(dedisp)
-# PSRDada
-find_package(PSRDada)
-
+# PSRDada (with pkg-config)
+find_package(PkgConfig REQUIRED)
+pkg_search_module(PSRDada psrdada)
 if (PSRDada_FOUND)
   set(HAVE_PSRDADA on)
   add_compile_definitions(HAVE_PSRDADA)
