@@ -685,11 +685,10 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
         if (total_giant_count > 1000000) {
           too_many_giants = true;
           float searched = ((float)dm_idx * 100) / (float)dm_count;
-          std::cout
-              << "WARNING: exceeded giant count: 10k "
-                 "DM ["
-              << dm_list[dm_idx] << "] space searched " << searched << "%"
-              << std::endl;
+          std::cout << "WARNING: exceeded giant count: 10k "
+                       "DM ["
+                    << dm_list[dm_idx] << "] space searched " << searched << "%"
+                    << std::endl;
           break;
         }
 
@@ -726,8 +725,6 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
   std::cout << "Filtering time:          " << filter_timer.getTime()
             << std::endl;
   std::cout << "Find giants time:        " << giants_timer.getTime()
-            << std::endl;
-  std::cout << "Process candidates time: " << candidates_timer.getTime()
             << std::endl;
   std::cout << "Total time:              " << total_timer.getTime()
             << std::endl;
