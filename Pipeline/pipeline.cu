@@ -6,26 +6,23 @@
  *
  ***************************************************************************/
 
-#include <iostream>
-#include <memory>
-#include <vector>
-
 #include <algorithm>
 #include <fstream>
 #include <iomanip>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <time.h>
-#include <utility> // For std::pair
-
-#include <thrust/device_vector.h>
-#include <thrust/host_vector.h>
+#include <utility>
+#include <vector>
 
 #include <thrust/copy.h>
+#include <thrust/device_vector.h>
 #include <thrust/extrema.h>
 #include <thrust/fill.h>
 #include <thrust/functional.h>
 #include <thrust/gather.h>
+#include <thrust/host_vector.h>
 #include <thrust/iterator/constant_iterator.h>
 #include <thrust/iterator/permutation_iterator.h>
 #include <thrust/reduce.h>
@@ -118,7 +115,7 @@ void write_candidates(hd_pipeline pl, hd_size nsamps, hd_size first_idx,
                          reinterpret_cast<sockaddr *>(&pl->dest_addr),
                          sizeof(pl->dest_addr));
             if (n_bytes == -1) {
-              std::perror("write_candidates failed");
+              BOOST_LOG_TRIVIAL(error) << "write_candidates failed";
             }
           } else {
             pl->file << ss.str();
@@ -135,7 +132,7 @@ void write_candidates(hd_pipeline pl, hd_size nsamps, hd_size first_idx,
                              reinterpret_cast<sockaddr *>(&pl->dest_addr),
                              sizeof(pl->dest_addr));
       if (n_bytes == -1) {
-        std::perror("sending socket etx failed");
+        BOOST_LOG_TRIVIAL(error) << "sending socket etx failed";
       }
     }
   }
@@ -179,30 +176,24 @@ hd_error allocate_gpu(const hd_pipeline pl) {
 
   cudaError_t cerror = cudaSetDevice(gpu_idx);
   if (cerror != cudaSuccess) {
-    std::cerr << "Could not setCudaDevice to " << gpu_idx << ": "
-              << cudaGetErrorString(cerror) << std::endl;
+    BOOST_LOG_TRIVIAL(error) << "Could not setCudaDevice to " << gpu_idx << ": "
+                             << cudaGetErrorString(cerror) << std::endl;
     return throw_cuda_error(cerror);
   }
 
-  if (pl->params.verbosity >= 1) {
-    std::cout << "Process " << proc_idx << " using GPU " << gpu_idx
-              << std::endl;
-  }
+  BOOST_LOG_TRIVIAL(trace) << "Process " << proc_idx << " using GPU " << gpu_idx
+                           << std::endl;
 
   if (!pl->params.yield_cpu) {
-    if (pl->params.verbosity >= 2) {
-      std::cout << "\tProcess " << proc_idx << " setting CPU to spin"
-                << std::endl;
-    }
+    BOOST_LOG_TRIVIAL(debug)
+        << "Process " << proc_idx << " setting CPU to spin";
     cerror = cudaSetDeviceFlags(cudaDeviceScheduleSpin);
     if (cerror != cudaSuccess) {
       return throw_cuda_error(cerror);
     }
   } else {
-    if (pl->params.verbosity >= 2) {
-      std::cout << "\tProcess " << proc_idx << " setting CPU to yield"
-                << std::endl;
-    }
+    BOOST_LOG_TRIVIAL(debug)
+        << "Process " << proc_idx << " setting CPU to yield";
     // Note: This Yield flag doesn't seem to work properly.
     //   The BlockingSync flag does the job, although it may interfere
     //     with GPU/CPU overlapping (not currently used).
@@ -250,26 +241,20 @@ hd_error hd_create_pipeline(hd_pipeline *pipeline_, hd_params params) {
 
   pipeline->params = params;
 
-  if (params.verbosity >= 2) {
-    std::cout << "\tAllocating GPU..." << std::endl;
-  }
+  BOOST_LOG_TRIVIAL(debug) << "Allocating GPU";
 
   hd_error error = allocate_gpu(pipeline.get());
   if (error != HD_NO_ERROR) {
     return throw_error(error);
   }
 
-  if (params.verbosity >= 1) {
-    std::cout << "nchans = " << params.nchans << std::endl;
-    std::cout << "dt     = " << params.dt << std::endl;
-    std::cout << "f0     = " << params.f0 << std::endl;
-    std::cout << "df     = " << params.df << std::endl;
-    std::cout << "nsnap     = " << params.nsnap << std::endl;
-  }
+  BOOST_LOG_TRIVIAL(debug) << "nchans: " << params.nchans;
+  BOOST_LOG_TRIVIAL(debug) << "dt: " << params.dt;
+  BOOST_LOG_TRIVIAL(debug) << "f0: " << params.f0;
+  BOOST_LOG_TRIVIAL(debug) << "df: " << params.df;
+  BOOST_LOG_TRIVIAL(debug) << "nsnap: " << params.nsnap;
 
-  if (params.verbosity >= 2) {
-    std::cout << "\tCreating dedispersion plan..." << std::endl;
-  }
+  BOOST_LOG_TRIVIAL(trace) << "Creating dedispersion plan";
 
   dedisp_error derror;
   derror = dedisp_create_plan(&pipeline->dedispersion_plan, params.nchans,
@@ -297,15 +282,10 @@ hd_error hd_create_pipeline(hd_pipeline *pipeline_, hd_params params) {
 
   *pipeline_ = pipeline.release();
 
-  if (params.verbosity >= 2) {
-    std::cout << "\tInitialisation complete." << std::endl;
-  }
-
-  if (params.verbosity >= 1) {
-    std::cout << "Using Thrust v" << THRUST_MAJOR_VERSION << "."
-              << THRUST_MINOR_VERSION << "." << THRUST_SUBMINOR_VERSION
-              << std::endl;
-  }
+  BOOST_LOG_TRIVIAL(trace) << "Initialisation complete.";
+  BOOST_LOG_TRIVIAL(debug) << "Using Thrust v" << THRUST_MAJOR_VERSION << "."
+                           << THRUST_MINOR_VERSION << "."
+                           << THRUST_SUBMINOR_VERSION;
 
   return HD_NO_ERROR;
 }
@@ -361,33 +341,30 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
   */
   stop_timer(clean_timer);
 
-  if (pl->params.verbosity >= 2) {
-    std::cout << "\tGenerating DM list..." << std::endl;
-  }
+  BOOST_LOG_TRIVIAL(debug) << "Generating DM list";
 
-  if (pl->params.verbosity >= 3) {
-    std::cout << "dm_min = " << pl->params.dm_min << std::endl;
-    std::cout << "dm_max = " << pl->params.dm_max << std::endl;
-    std::cout << "dm_tol = " << pl->params.dm_tol << std::endl;
-    std::cout << "dm_pulse_width = " << pl->params.dm_pulse_width << std::endl;
-    std::cout << "nchans = " << pl->params.nchans << std::endl;
-    std::cout << "dt = " << pl->params.dt << std::endl;
+  BOOST_LOG_TRIVIAL(trace) << "dm_min: " << pl->params.dm_min;
+  BOOST_LOG_TRIVIAL(trace) << "dm_max: " << pl->params.dm_max;
+  BOOST_LOG_TRIVIAL(trace) << "dm_tol: " << pl->params.dm_tol;
+  BOOST_LOG_TRIVIAL(trace) << "dm_pulse_width: " << pl->params.dm_pulse_width;
+  BOOST_LOG_TRIVIAL(trace) << "nchans: " << pl->params.nchans;
+  BOOST_LOG_TRIVIAL(trace) << "dt: " << pl->params.dt;
 
-    std::cout << "dedisp nchans = "
-              << dedisp_get_channel_count(pl->dedispersion_plan) << std::endl;
-    std::cout << "dedisp dt = " << dedisp_get_dt(pl->dedispersion_plan)
-              << std::endl;
-    std::cout << "dedisp f0 = " << dedisp_get_f0(pl->dedispersion_plan)
-              << std::endl;
-    std::cout << "dedisp df = " << dedisp_get_df(pl->dedispersion_plan)
-              << std::endl;
-  }
+  BOOST_LOG_TRIVIAL(trace) << "dedisp nchans: "
+                           << dedisp_get_channel_count(pl->dedispersion_plan);
+  BOOST_LOG_TRIVIAL(trace) << "dedisp dt: "
+                           << dedisp_get_dt(pl->dedispersion_plan);
+  BOOST_LOG_TRIVIAL(trace) << "dedisp f0: "
+                           << dedisp_get_f0(pl->dedispersion_plan);
+  BOOST_LOG_TRIVIAL(trace) << "dedisp df: "
+                           << dedisp_get_df(pl->dedispersion_plan);
 
   hd_size dm_count = dedisp_get_dm_count(pl->dedispersion_plan);
   const float *dm_list = dedisp_get_dm_list(pl->dedispersion_plan);
 
   const dedisp_size *scrunch_factors =
       dedisp_get_dt_factors(pl->dedispersion_plan);
+
   if (pl->params.verbosity >= 3) {
     std::cout << "DM List for " << pl->params.dm_min << " to "
               << pl->params.dm_max << std::endl;
@@ -413,12 +390,10 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
   // Report the number of samples that will be properly processed
   *nsamps_processed = nsamps_computed - pl->params.boxcar_max;
 
-  if (pl->params.verbosity >= 3) {
-    std::cout << "dm_count = " << dm_count << std::endl;
-    std::cout << "max delay = " << dedisp_get_max_delay(pl->dedispersion_plan)
-              << std::endl;
-    std::cout << "nsamps_computed = " << nsamps_computed << std::endl;
-  }
+  BOOST_LOG_TRIVIAL(trace) << "dm_count: " << dm_count;
+  BOOST_LOG_TRIVIAL(trace) << "max delay: "
+                           << dedisp_get_max_delay(pl->dedispersion_plan);
+  BOOST_LOG_TRIVIAL(trace) << "nsamps_computed: " << nsamps_computed;
 
   start_timer(memory_timer);
 
@@ -446,10 +421,8 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
   typedef thrust::device_ptr<hd_float> dev_float_ptr;
   typedef thrust::device_ptr<hd_size> dev_size_ptr;
 
-  if (pl->params.verbosity >= 2) {
-    std::cout << "\tDedispersing for DMs " << dm_list[0] << " to "
-              << dm_list[dm_count - 1] << "..." << std::endl;
-  }
+  BOOST_LOG_TRIVIAL(debug) << "Dedispersing for DMs " << dm_list[0] << " to "
+                           << dm_list[dm_count - 1];
 
   // Dedisperse
   dedisp_error derror;
@@ -471,9 +444,7 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
     return throw_dedisp_error(derror);
   }
 
-  if (pl->params.verbosity >= 2) {
-    std::cout << "\tBeginning inner pipeline..." << std::endl;
-  }
+  BOOST_LOG_TRIVIAL(debug) << "Beginning inner pipeline";
 
   bool too_many_giants = false;
   hd_size dm_idx_output = 0;
@@ -495,15 +466,12 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
         break;
       }
 
-      if (pl->params.verbosity >= 4) {
-        std::cout << "dm_idx     = " << dm_idx << std::endl;
-        std::cout << "scrunch    = " << scrunch_factors[dm_idx] << std::endl;
-        std::cout << "cur_nsamps = " << cur_nsamps << std::endl;
-        std::cout << "dt0        = " << pl->params.dt << std::endl;
-        std::cout << "cur_dt     = " << cur_dt << std::endl;
-
-        std::cout << "\tBaselining and normalising each beam..." << std::endl;
-      }
+      BOOST_LOG_TRIVIAL(trace) << "dm_idx: " << dm_idx;
+      BOOST_LOG_TRIVIAL(trace) << "scrunch: " << scrunch_factors[dm_idx];
+      BOOST_LOG_TRIVIAL(trace) << "cur_nsamps: " << cur_nsamps;
+      BOOST_LOG_TRIVIAL(trace) << "dt0: " << pl->params.dt;
+      BOOST_LOG_TRIVIAL(trace) << "cur_dt: " << cur_dt;
+      BOOST_LOG_TRIVIAL(trace) << "Baselining and normalising each beam";
 
       hd_float *time_series = thrust::raw_pointer_cast(&pl->d_time_series[0]);
 
@@ -601,10 +569,8 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
         hd_size rel_filter_width = filter_width / cur_dm_scrunch;
         hd_size filter_idx = filter_width;
 
-        if (pl->params.verbosity >= 4) {
-          std::cout << "Filtering each beam at width of " << filter_width
-                    << std::endl;
-        }
+        BOOST_LOG_TRIVIAL(trace)
+            << "Filtering each beam at width of " << filter_width << std::endl;
 
         // Note: Filter width is relative to the current time resolution
         hd_size rel_min_tscrunch_width = std::max(
@@ -682,10 +648,10 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
         if (total_giant_count > 1000000) {
           too_many_giants = true;
           float searched = ((float)dm_idx * 100) / (float)dm_count;
-          std::cout << "WARNING: exceeded giant count: 10k "
-                       "DM ["
-                    << dm_list[dm_idx] << "] space searched " << searched << "%"
-                    << std::endl;
+          BOOST_LOG_TRIVIAL(error)
+              << "WARNING: exceeded giant count: 10k "
+                 "DM ["
+              << dm_list[dm_idx] << "] space searched " << searched << "%";
           break;
         }
 
@@ -696,8 +662,8 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
   } // close gulp_idx condition
 
   hd_size giant_count = d_giant_peaks.size();
-  std::cout << "Giant count = " << giant_count << std::endl;
-  std::cout << "final_space_searched " << dm_list[dm_idx_output] << std::endl;
+  BOOST_LOG_TRIVIAL(info) << "Giant count = " << giant_count;
+  BOOST_LOG_TRIVIAL(info) << "final_space_searched " << dm_list[dm_idx_output];
 
   // Fill in the data
   write_candidates(pl, nsamps, first_idx, nsamps_computed, dm_list,
@@ -705,26 +671,18 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
                    d_giant_dm_inds);
 
   stop_timer(candidates_timer);
-
   stop_timer(total_timer);
 
-  std::cout << "Mem alloc time:          " << memory_timer.getTime()
-            << std::endl;
-  std::cout << "0-DM cleaning time:      " << clean_timer.getTime()
-            << std::endl;
-  std::cout << "Dedispersion time:       " << dedisp_timer.getTime()
-            << std::endl;
-  std::cout << "Copy time:               " << copy_timer.getTime() << std::endl;
-  std::cout << "Baselining time:         " << baseline_timer.getTime()
-            << std::endl;
-  std::cout << "Normalisation time:      " << normalise_timer.getTime()
-            << std::endl;
-  std::cout << "Filtering time:          " << filter_timer.getTime()
-            << std::endl;
-  std::cout << "Find giants time:        " << giants_timer.getTime()
-            << std::endl;
-  std::cout << "Total time:              " << total_timer.getTime()
-            << std::endl;
+  BOOST_LOG_TRIVIAL(debug) << "Mem alloc time: " << memory_timer.getTime();
+  BOOST_LOG_TRIVIAL(debug) << "0-DM cleaning time: " << clean_timer.getTime();
+  BOOST_LOG_TRIVIAL(debug) << "Dedispersion time: " << dedisp_timer.getTime();
+  BOOST_LOG_TRIVIAL(debug) << "Copy time: " << copy_timer.getTime();
+  BOOST_LOG_TRIVIAL(debug) << "Baselining time: " << baseline_timer.getTime();
+  BOOST_LOG_TRIVIAL(debug) << "Normalisation time: "
+                           << normalise_timer.getTime();
+  BOOST_LOG_TRIVIAL(debug) << "Filtering time: " << filter_timer.getTime();
+  BOOST_LOG_TRIVIAL(debug) << "Find giants time: " << giants_timer.getTime();
+  BOOST_LOG_TRIVIAL(debug) << "Total time: " << total_timer.getTime();
 
   if (too_many_giants) {
     return HD_TOO_MANY_EVENTS;
@@ -734,9 +692,7 @@ hd_error hd_execute(hd_pipeline pl, const hd_byte *h_filterbank, hd_size nsamps,
 }
 
 void hd_destroy_pipeline(hd_pipeline pipeline) {
-  if (pipeline->params.verbosity >= 2) {
-    std::cout << "\tDeleting pipeline object..." << std::endl;
-  }
+  BOOST_LOG_TRIVIAL(debug) << "Deleting pipeline object";
 
   dedisp_destroy_plan(pipeline->dedispersion_plan);
 

@@ -14,7 +14,7 @@ add_library(hdpipeline
     median_filter.cu
     matched_filter.cu)
 
-target_link_libraries(hdpipeline hdnetwork hdformats ${Boost_LIBRARIES} dedisp)
+target_link_libraries(hdpipeline hdnetwork hdformats ${Boost_LIBRARIES} ${Boost_LOG_LIBRARY} ${Boost_LOG_SETUP_LIBRARY} dedisp)
 
 target_include_directories(hdpipeline PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(hdpipeline PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../Network")
