@@ -34,13 +34,34 @@ using std::endl;
 #include "hd/PSRDadaRingBuffer.hpp"
 #endif
 
+#include <boost/log/core.hpp>
+#include <boost/log/expressions.hpp>
+#include <boost/log/trivial.hpp>
+
 #include "hd/stopwatch.hpp"
 
-int main(int argc, char *argv[]) {
+namespace logging = boost::log;
 
+void log_init(int verbosity) {
+  if (verbosity >= 4) {
+    logging::core::get()->set_filter(logging::trivial::severity >=
+                                     logging::trivial::trace);
+  } else if (verbosity >= 1) {
+    logging::core::get()->set_filter(logging::trivial::severity >=
+                                     logging::trivial::debug);
+  } else {
+    logging::core::get()->set_filter(logging::trivial::severity >=
+                                     logging::trivial::info);
+  }
+}
+
+int main(int argc, char *argv[]) {
   hd_params params;
   hd_set_default_params(&params);
   int ok = hd_parse_command_line(argc, argv, &params);
+
+  log_init(params.verbosity);
+
   size_t nsamps_gulp = params.nsamps_gulp;
 
   if (ok < 0)

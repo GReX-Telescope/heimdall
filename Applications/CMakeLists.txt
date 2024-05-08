@@ -10,7 +10,7 @@ add_executable(generate_dmlist generate_dmlist.cpp)
 # heimdall - main executable
 target_include_directories(heimdall PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../Pipeline")
 target_include_directories(heimdall PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../Formats")
-target_link_libraries(heimdall hdpipeline hdnetwork hdformats)
+target_link_libraries(heimdall hdpipeline hdnetwork hdformats ${Boost_LOG_LIBRARY} ${Boost_LOG_SETUP_LIBRARY})
 if (PSRDada_FOUND)
     target_link_libraries(heimdall psrdada)
 endif()

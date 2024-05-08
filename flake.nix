@@ -37,6 +37,7 @@
           boost
           # Linting
           alejandra
+          clang-tools
         ];
         heimdall = cudaStdenv.mkDerivation rec {
           pname = "heimdall";
