@@ -12,7 +12,6 @@
 
 #include <algorithm>
 #include <fstream>
-#include <functional>
 #include <iomanip>
 #include <sstream>
 #include <string>
@@ -35,19 +34,14 @@
 #include <thrust/transform.h>
 #include <thrust/version.h>
 
-#include "hd/clean_filterbank_rfi.hpp"
-#include "hd/maths.hpp"
 #include "hd/pipeline.hpp"
 #include "hd/strided_range.hpp"
 
 #include "hd/find_giants.hpp"
 #include "hd/get_rms.hpp"
-#include "hd/label_candidate_clusters.hpp"
 #include "hd/matched_filter.hpp"
-#include "hd/merge_candidates.hpp"
 #include "hd/remove_baseline.hpp"
 
-#include "hd/DataSource.hpp"
 #include "hd/stopwatch.hpp" // For benchmarking
 
 #include <dedisp.h>
@@ -58,6 +52,9 @@
 #include <sys/socket.h> // socket, sendto
 #include <sys/types.h>  // uint16_t
 #include <unistd.h>     // close
+
+// Logging
+#include <boost/log/trivial.hpp>
 
 struct hd_pipeline_t {
   hd_params params;
