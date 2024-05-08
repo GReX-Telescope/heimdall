@@ -73,3 +73,6 @@ build/
 # LSP
 .cache/
 .ccls-cache/
+
+# direnv
+.direnv
